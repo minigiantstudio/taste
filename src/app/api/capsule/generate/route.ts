@@ -60,11 +60,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient()
 
-    // Fetch context
+    // Fetch context — ownership check required: service client bypasses RLS
     const { data: contextData, error: contextError } = await supabase
       .from('contexts')
       .select('*')
       .eq('id', contextId)
+      .eq('user_id', user.id)
       .single()
 
     if (contextError || !contextData) {
@@ -73,10 +74,11 @@ export async function POST(req: NextRequest) {
 
     const context = contextData as Context
 
-    // Fetch captures for this context
+    // Fetch captures for this context — ownership check: service client bypasses RLS
     const { data: capturesData } = await supabase
       .from('captures')
       .select('*')
+      .eq('user_id', user.id)
       .contains('context_ids', [contextId])
 
     let captures: Capture[] = (capturesData ?? []) as Capture[]
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest) {
       const { data: parentCapturesData, error: parentError } = await supabase
         .from('captures')
         .select('*')
+        .eq('user_id', user.id)
         .contains('context_ids', [context.parent_context_id])
 
       if (parentError) {
